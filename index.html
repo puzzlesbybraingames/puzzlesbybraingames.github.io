@@ -1,0 +1,1111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Paint by Chess</title>
+    <meta
+      name="description"
+      content="A puzzle game where chess pieces don't capture — they paint. Match the picture in as few moves as you can. 354 hand-checked puzzles and a new Daily every day."
+    />
+    <meta name="theme-color" content="#12131a" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Paint by Chess" />
+    <meta
+      property="og:description"
+      content="Chess pieces paint the board. Match the picture in as few moves as you can."
+    />
+    <meta property="og:url" content="https://puzzlesbybraingames.github.io/" />
+    <meta name="twitter:card" content="summary" />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2312131a'/%3E%3Crect x='5' y='5' width='11' height='11' fill='%235b8cf5'/%3E%3Crect x='16' y='5' width='11' height='11' fill='%232c3040'/%3E%3Crect x='5' y='16' width='11' height='11' fill='%232c3040'/%3E%3Crect x='16' y='16' width='11' height='11' fill='%23f4704a'/%3E%3C/svg%3E"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+
+    <style>
+      /* ---------------------------------------------------------------------
+         Tokens. The board, text and accent values are the game's own, read from
+         apps/web/src/render/theme.ts; the eight paint colours are PALETTE from
+         packages/engine/src/palette.ts, with their real names. Light is defined
+         on bare :root, then redefined for the two dark states.
+         ------------------------------------------------------------------ */
+      :root {
+        --ground: #f3f4f9;
+        --surface: #ffffff;
+        --sunk: #e9ebf3;
+        --cell: #e2e5f0;
+        --wall: #babfd0;
+        --grid: #cacfde;
+        --text: #181a24;
+        --muted: #686e84;
+        --faint: #8d93a8;
+        --line: #dcdfea;
+        --accent: #3a6ae8;
+        --accent-ink: #ffffff;
+
+        --ember: #e2542c;
+        --marigold: #d9930f;
+        --fern: #2f9c55;
+        --lagoon: #0f97a0;
+        --cobalt: #3060da;
+        --orchid: #7f4ed1;
+        --rose: #d2427f;
+        --indigo: #4a3bc4;
+
+        --shadow: 0 1px 2px rgba(24, 26, 36, 0.06), 0 8px 24px -12px rgba(24, 26, 36, 0.18);
+
+        --display: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+        --body: 'IBM Plex Sans', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+        --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+        --measure: 34rem;
+        --radius: 14px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --ground: #101119;
+          --surface: #1a1c26;
+          --sunk: #15171f;
+          --cell: #2c3040;
+          --wall: #161820;
+          --grid: #3c4156;
+          --text: #eceef6;
+          --muted: #949ab0;
+          --faint: #767c93;
+          --line: #282b38;
+          --accent: #7aa2ff;
+          --accent-ink: #0d1020;
+
+          --ember: #f4704a;
+          --marigold: #f2b53c;
+          --fern: #5ec27a;
+          --lagoon: #3fbfc6;
+          --cobalt: #5b8cf5;
+          --orchid: #a97cf0;
+          --rose: #f06fa8;
+          --indigo: #7b6ef0;
+
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+        }
+      }
+
+      :root[data-theme='dark'] {
+        --ground: #101119;
+        --surface: #1a1c26;
+        --sunk: #15171f;
+        --cell: #2c3040;
+        --wall: #161820;
+        --grid: #3c4156;
+        --text: #eceef6;
+        --muted: #949ab0;
+        --faint: #767c93;
+        --line: #282b38;
+        --accent: #7aa2ff;
+        --accent-ink: #0d1020;
+
+        --ember: #f4704a;
+        --marigold: #f2b53c;
+        --fern: #5ec27a;
+        --lagoon: #3fbfc6;
+        --cobalt: #5b8cf5;
+        --orchid: #a97cf0;
+        --rose: #f06fa8;
+        --indigo: #7b6ef0;
+
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--text);
+        font-family: var(--body);
+        font-size: 17px;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      img {
+        max-width: 100%;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 68rem;
+        margin: 0 auto;
+        padding-inline: 20px;
+      }
+
+      /* --- shared type ------------------------------------------------- */
+
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family: var(--display);
+        font-weight: 600;
+        text-wrap: balance;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      h1 {
+        font-size: clamp(2.35rem, 6.2vw, 3.9rem);
+        line-height: 1.04;
+      }
+
+      h2 {
+        font-size: clamp(1.6rem, 3.6vw, 2.25rem);
+        line-height: 1.15;
+      }
+
+      h3 {
+        font-size: 1.1rem;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+      }
+
+      p {
+        margin: 0;
+        max-width: var(--measure);
+      }
+
+      .lede {
+        font-size: clamp(1.05rem, 2.2vw, 1.22rem);
+        color: var(--muted);
+      }
+
+      /* --- hero ---------------------------------------------------------- */
+
+      .hero {
+        padding-block: clamp(3rem, 8vw, 5.5rem) clamp(2.5rem, 6vw, 4rem);
+      }
+
+      .hero-grid {
+        display: grid;
+        gap: clamp(2.25rem, 5vw, 3.5rem);
+        align-items: center;
+      }
+
+      @media (min-width: 900px) {
+        .hero-grid {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
+        }
+      }
+
+      .hero-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 1.4rem;
+        align-items: flex-start;
+      }
+
+      .thesis {
+        font-family: var(--display);
+        font-size: clamp(1.15rem, 2.5vw, 1.4rem);
+        font-weight: 500;
+        font-style: italic;
+        color: var(--text);
+        line-height: 1.45;
+        max-width: 24ch;
+      }
+
+      /* The one flourish: the word that carries the whole game. */
+      .thesis em {
+        font-style: normal;
+        font-weight: 700;
+        background-image: linear-gradient(transparent 62%, color-mix(in srgb, var(--ember) 35%, transparent) 62%);
+        padding-inline: 0.1em;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        align-items: center;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.72rem 1.3rem;
+        border-radius: 999px;
+        font-family: var(--body);
+        font-size: 0.97rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid transparent;
+        transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-ghost {
+        color: var(--text);
+        border-color: var(--line);
+        background: var(--surface);
+      }
+
+      .btn-ghost:hover {
+        border-color: var(--faint);
+      }
+
+      .btn svg {
+        flex: none;
+      }
+
+      /* --- board --------------------------------------------------------- */
+
+      .board-stage {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        min-width: 0;
+      }
+
+      .board {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        aspect-ratio: 1;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 2px;
+        padding: 10px;
+        background: var(--wall);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .sq {
+        background: var(--cell);
+        border-radius: 3px;
+        transition: background-color 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .pc {
+        position: absolute;
+        width: calc((100% - 20px - 10px) / 6);
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        font-size: clamp(1.25rem, 4.4vw, 2rem);
+        line-height: 1;
+        transition: transform 0.5s cubic-bezier(0.34, 1.32, 0.64, 1);
+        will-change: transform;
+        pointer-events: none;
+      }
+
+      /* A piece always ends up standing on the colour it just laid down, so it
+         cannot be tinted that colour or it disappears into its own paint. White
+         with a dark edge is the one ink that holds on all eight palette fills,
+         in both themes, and on a bare cell mid-move. */
+      .pc,
+      .mini div {
+        color: #ffffff;
+        text-shadow:
+          0 0 1px rgba(0, 0, 0, 0.95),
+          0 1px 0 rgba(0, 0, 0, 0.6),
+          0 0 4px rgba(0, 0, 0, 0.4);
+      }
+
+      .board-caption {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 3.1em;
+      }
+
+      .board-caption p {
+        font-size: 0.93rem;
+        color: var(--muted);
+        margin: 0;
+        max-width: 30ch;
+      }
+
+      .board-caption p b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .replay {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: none;
+        border: 0;
+        padding: 0.2rem 0;
+        cursor: pointer;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--faint);
+        transition: color 0.15s ease;
+      }
+
+      .replay:hover {
+        color: var(--accent);
+      }
+
+      .replay[disabled] {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      .tally {
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* --- rule cards ---------------------------------------------------- */
+
+      section {
+        padding-block: clamp(2.75rem, 7vw, 4.5rem);
+      }
+
+      .section-head {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        margin-bottom: 2.25rem;
+      }
+
+      .rules {
+        display: grid;
+        gap: 1.1rem;
+        grid-template-columns: 1fr;
+      }
+
+      @media (min-width: 720px) {
+        .rules {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .rule {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 1.3rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .mini {
+        width: 100%;
+        max-width: 150px;
+        aspect-ratio: 1;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2px;
+        padding: 6px;
+        background: var(--wall);
+        border-radius: 8px;
+      }
+
+      .mini div {
+        background: var(--cell);
+        border-radius: 2px;
+        display: grid;
+        place-items: center;
+        font-size: 0.95rem;
+        line-height: 1;
+      }
+
+      .mini div.ghost {
+        outline: 1.5px dashed var(--faint);
+        outline-offset: -3px;
+      }
+
+      .rule h3 {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+      }
+
+      .rule h3 span {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        font-weight: 400;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+
+      .rule p {
+        font-size: 0.93rem;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      /* --- ladders ------------------------------------------------------- */
+
+      .ladders {
+        border-top: 1px solid var(--line);
+      }
+
+      .ladder {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.25rem 1.5rem;
+        align-items: baseline;
+        padding-block: 0.95rem;
+        border-bottom: 1px solid var(--line);
+      }
+
+      @media (min-width: 560px) {
+        .ladder {
+          grid-template-columns: 10rem 1fr auto;
+        }
+      }
+
+      .ladder-name {
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        flex: none;
+      }
+
+      .ladder-note {
+        color: var(--muted);
+        font-size: 0.93rem;
+        grid-column: 1 / -1;
+      }
+
+      @media (min-width: 560px) {
+        .ladder-note {
+          grid-column: auto;
+        }
+      }
+
+      .ladder-count {
+        font-family: var(--mono);
+        font-size: 0.93rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .total {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.6rem;
+        padding-top: 1.15rem;
+      }
+
+      .total b {
+        font-family: var(--display);
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .total span {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      /* --- the rest ------------------------------------------------------ */
+
+      .facts {
+        display: grid;
+        gap: 1.1rem;
+        grid-template-columns: 1fr;
+        margin-top: 0.5rem;
+      }
+
+      @media (min-width: 720px) {
+        .facts {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .fact {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        padding: 1.2rem 1.3rem;
+        background: var(--sunk);
+        border-radius: var(--radius);
+      }
+
+      .fact p {
+        font-size: 0.93rem;
+        color: var(--muted);
+      }
+
+      .closer {
+        border-top: 1px solid var(--line);
+      }
+
+      .closer-lines {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        font-family: var(--display);
+        font-size: clamp(1.25rem, 3.4vw, 1.85rem);
+        font-weight: 500;
+        line-height: 1.3;
+        letter-spacing: -0.015em;
+        max-width: 26ch;
+      }
+
+      .closer-lines span:last-child {
+        color: var(--muted);
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        padding-block: 2.5rem 3.5rem;
+        margin-top: 1rem;
+      }
+
+      .foot-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem 2.5rem;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .foot-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.5rem;
+        font-size: 0.92rem;
+      }
+
+      .foot-links a {
+        color: var(--muted);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+      }
+
+      .foot-links a:hover {
+        color: var(--accent);
+        border-bottom-color: currentColor;
+      }
+
+      .foot-mark {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .foot-mark strong {
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 1.05rem;
+      }
+
+      .foot-mark span {
+        font-size: 0.87rem;
+        color: var(--faint);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.001ms !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <!-- ================= hero ================= -->
+      <div class="wrap hero">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Puzzle · Android</p>
+            <h1>Paint by Chess</h1>
+            <p class="thesis">Chess pieces don't capture here &mdash; they <em>paint</em>.</p>
+            <p class="lede">
+              Every cell a piece travels through, from where it starts to where it lands, is
+              repainted in that piece's colour. Match the picture on the card, exactly, in as few
+              moves as you can.
+            </p>
+            <div class="cta-row">
+              <a
+                class="btn btn-primary"
+                href="https://play.google.com/store/apps/details?id=com.paintbychess.game"
+              >
+                <svg width="15" height="17" viewBox="0 0 512 566" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M20 12C8 25 1 45 1 71v424c0 26 7 46 19 59l2 2 237-237v-6L22 10l-2 2z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M338 362L259 283v-6l79-79 2 1 94 53c27 15 27 40 0 55l-94 53-2 2z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M340 360l-81-81L20 518c9 9 24 10 40 1l280-159"
+                  />
+                  <path fill="currentColor" d="M340 198L60 39C44 30 29 31 20 40l239 239 81-81z" />
+                </svg>
+                Get it on Google Play
+              </a>
+              <a class="btn btn-ghost" href="#rule">See the rule</a>
+            </div>
+          </div>
+
+          <div class="board-stage">
+            <div class="board" id="board" role="img" aria-label="A six by six board. A rook slides up the left column painting every cell blue, a bishop crosses diagonally in orange, and a knight jumps and paints only the two ends of its move in green."></div>
+            <div class="board-caption">
+              <p id="caption"><b>Three moves.</b> That is the whole game.</p>
+              <button class="replay" id="replay" type="button">
+                <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true">
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    d="M14 8A6 6 0 1 1 8 2c2.2 0 4.1 1.2 5.2 3M13.6 1.6v3.6h-3.6"
+                  />
+                </svg>
+                <span id="replay-label">Replay</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= the rule ================= -->
+      <section class="wrap" id="rule">
+        <div class="section-head">
+          <p class="eyebrow">One rule</p>
+          <h2>How each piece paints</h2>
+          <p class="lede">
+            Pieces move exactly as they do in chess. What changes is what they leave behind.
+          </p>
+        </div>
+
+        <div class="rules" id="rules"></div>
+      </section>
+
+      <!-- ================= what's in it ================= -->
+      <section class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Four ladders</p>
+          <h2>354 hand-checked puzzles</h2>
+          <p class="lede">
+            Every difficulty is open from the start. No waiting to reach the one you came for.
+          </p>
+        </div>
+
+        <div class="ladders" id="ladders"></div>
+
+        <div class="total">
+          <b>354</b>
+          <span>puzzles, plus a new Daily every day &mdash; ranked by moves, then by time.</span>
+        </div>
+
+        <div class="facts">
+          <div class="fact">
+            <h3>Play entirely offline</h3>
+            <p>
+              The whole game works as a guest, with no account at all. Nothing to sign up for before
+              you can start.
+            </p>
+          </div>
+          <div class="fact">
+            <h3>Or take it with you</h3>
+            <p>
+              Make an account and your progress follows you between devices, and your name goes on
+              the Daily and all-time boards.
+            </p>
+          </div>
+          <div class="fact">
+            <h3>Stars for solving at par</h3>
+            <p>
+              Every puzzle has a known shortest solution. Matching it is the target; hints are there
+              when you're stuck.
+            </p>
+          </div>
+          <div class="fact">
+            <h3>No clock, no opponent</h3>
+            <p>
+              You need to know how the pieces move. You don't need to know a single opening.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= closer ================= -->
+      <section class="wrap closer">
+        <div class="closer-lines">
+          <span>Just the board, the picture,</span>
+          <span>and the shortest path between them.</span>
+        </div>
+        <div class="cta-row" style="margin-top: 2rem">
+          <a
+            class="btn btn-primary"
+            href="https://play.google.com/store/apps/details?id=com.paintbychess.game"
+          >
+            Get it on Google Play
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="wrap">
+      <div class="foot-grid">
+        <div class="foot-mark">
+          <strong>Paint by Chess</strong>
+          <span>by Puzzles by Brain Games</span>
+        </div>
+        <nav class="foot-links" aria-label="Site">
+          <a href="https://play.google.com/store/apps/details?id=com.paintbychess.game"
+            >Google Play</a
+          >
+          <a href="https://puzzlesbybraingames.github.io/paint-by-chess-policy/">Privacy policy</a>
+          <a href="https://puzzlesbybraingames.github.io/paint-by-chess-policy/delete-account/"
+            >Delete your account</a
+          >
+          <a href="mailto:puzzlesbybraingames@gmail.com">Contact</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        'use strict';
+
+        var N = 6;
+        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* The three moves teach the three behaviours in order: a slide paints the
+           whole line, a diagonal is the same rule turned, and a jump paints only
+           its two ends — while covering a cell the rook already painted, which is
+           what makes move order matter. */
+        var MOVES = [
+          {
+            glyph: '♜',
+            color: 'cobalt',
+            from: [0, 5],
+            to: [0, 1],
+            paints: [
+              [0, 5],
+              [0, 4],
+              [0, 3],
+              [0, 2],
+              [0, 1],
+            ],
+            caption: '<b>The rook slides.</b> Every cell on the line it travels is repainted.',
+          },
+          {
+            glyph: '♝',
+            color: 'ember',
+            from: [4, 5],
+            to: [1, 2],
+            paints: [
+              [4, 5],
+              [3, 4],
+              [2, 3],
+              [1, 2],
+            ],
+            caption: '<b>The bishop crosses.</b> Same rule, along the diagonal.',
+          },
+          {
+            glyph: '♞',
+            color: 'fern',
+            from: [2, 5],
+            to: [0, 4],
+            paints: [
+              [2, 5],
+              [0, 4],
+            ],
+            caption:
+              '<b>The knight jumps.</b> Only the two ends &mdash; never what it leaps over. And it covers the blue it lands on.',
+          },
+        ];
+
+        var board = document.getElementById('board');
+        var caption = document.getElementById('caption');
+        var replay = document.getElementById('replay');
+        if (!board || !caption || !replay) return;
+
+        var squares = [];
+        for (var i = 0; i < N * N; i++) {
+          var sq = document.createElement('div');
+          sq.className = 'sq';
+          board.appendChild(sq);
+          squares.push(sq);
+        }
+
+        var pieces = MOVES.map(function (mv) {
+          var el = document.createElement('div');
+          el.className = 'pc';
+          el.textContent = mv.glyph;
+          board.appendChild(el);
+          return el;
+        });
+
+        function at(col, row) {
+          return squares[row * N + col];
+        }
+
+        /* Cells are a 1fr grid inside 10px padding with 2px gaps, so a piece's
+           offset is the padding plus its index share of the track. */
+        function place(el, col, row) {
+          el.style.transform =
+            'translate(calc(' +
+            col +
+            ' * (100% + 2px) + 10px), calc(' +
+            row +
+            ' * (100% + 2px) + 10px))';
+        }
+
+        function clearBoard() {
+          for (var i = 0; i < squares.length; i++) squares[i].style.backgroundColor = '';
+          MOVES.forEach(function (mv, i) {
+            place(pieces[i], mv.from[0], mv.from[1]);
+          });
+        }
+
+        function paintFinal() {
+          MOVES.forEach(function (mv, i) {
+            mv.paints.forEach(function (p) {
+              at(p[0], p[1]).style.backgroundColor = 'var(--' + mv.color + ')';
+            });
+            place(pieces[i], mv.to[0], mv.to[1]);
+          });
+          caption.innerHTML = MOVES[MOVES.length - 1].caption;
+        }
+
+        var timers = [];
+        function after(ms, fn) {
+          timers.push(window.setTimeout(fn, ms));
+        }
+        function stop() {
+          timers.forEach(window.clearTimeout);
+          timers = [];
+        }
+
+        var playing = false;
+
+        function play() {
+          if (playing) return;
+          playing = true;
+          replay.disabled = true;
+          stop();
+          clearBoard();
+          caption.innerHTML = '<b>Three moves.</b> That is the whole game.';
+
+          var t = 520;
+          MOVES.forEach(function (mv, i) {
+            after(t, function () {
+              caption.innerHTML = mv.caption;
+              place(pieces[i], mv.to[0], mv.to[1]);
+            });
+            mv.paints.forEach(function (p, j) {
+              after(t + j * 105, function () {
+                at(p[0], p[1]).style.backgroundColor = 'var(--' + mv.color + ')';
+              });
+            });
+            t += 640 + mv.paints.length * 105;
+          });
+
+          after(t, function () {
+            playing = false;
+            replay.disabled = false;
+          });
+        }
+
+        /* At rest the board shows the finished picture, so a still of the page —
+           a share preview, a reader who never scrolls back — sees a solved board
+           rather than an empty one. The animation is then an invitation, not the
+           only way to read it. */
+        clearBoard();
+        paintFinal();
+
+        replay.addEventListener('click', play);
+
+        if (!reduced) {
+          after(900, play);
+        }
+
+        /* ---- the three rule cards ---- */
+
+        var RULES = [
+          {
+            title: 'Slide',
+            pieces: 'Rook · Bishop · Queen',
+            glyph: '♛',
+            color: 'orchid',
+            from: [0, 3],
+            to: [3, 0],
+            paints: [
+              [0, 3],
+              [1, 2],
+              [2, 1],
+              [3, 0],
+            ],
+            text: 'Paints the whole line it slides along, start and finish included.',
+          },
+          {
+            title: 'Jump',
+            pieces: 'Knight',
+            glyph: '♞',
+            color: 'lagoon',
+            from: [0, 3],
+            to: [1, 1],
+            paints: [
+              [0, 3],
+              [1, 1],
+            ],
+            text: 'Paints only the two ends of the jump. What it leaps over stays untouched.',
+          },
+          {
+            title: 'Step',
+            pieces: 'King · Pawn',
+            glyph: '♟',
+            color: 'marigold',
+            from: [1, 3],
+            to: [1, 2],
+            paints: [
+              [1, 3],
+              [1, 2],
+            ],
+            text: 'Paints where it leaves and where it arrives &mdash; two cells.',
+          },
+        ];
+
+        var host = document.getElementById('rules');
+        if (host) {
+          RULES.forEach(function (r) {
+            var card = document.createElement('div');
+            card.className = 'rule';
+
+            var mini = document.createElement('div');
+            mini.className = 'mini';
+            mini.setAttribute('aria-hidden', 'true');
+
+            for (var row = 0; row < 4; row++) {
+              for (var col = 0; col < 4; col++) {
+                var cell = document.createElement('div');
+                var painted = r.paints.some(function (p) {
+                  return p[0] === col && p[1] === row;
+                });
+                if (painted) cell.style.backgroundColor = 'var(--' + r.color + ')';
+                if (r.from[0] === col && r.from[1] === row) cell.className = 'ghost';
+                if (r.to[0] === col && r.to[1] === row) cell.textContent = r.glyph;
+                mini.appendChild(cell);
+              }
+            }
+
+            var h = document.createElement('h3');
+            h.innerHTML = r.title + ' <span>' + r.pieces + '</span>';
+
+            var p = document.createElement('p');
+            p.innerHTML = r.text;
+
+            card.appendChild(mini);
+            card.appendChild(h);
+            card.appendChild(p);
+            host.appendChild(card);
+          });
+        }
+
+        /* ---- the four ladders ---- */
+
+        var LADDERS = [
+          { name: 'Beginner', color: 'fern', count: 100, note: '3 to 5 moves' },
+          { name: 'Normal', color: 'lagoon', count: 100, note: '6 to 9 moves' },
+          { name: 'Challenging', color: 'marigold', count: 100, note: '10 to 15 moves' },
+          { name: 'Expert', color: 'ember', count: 50, note: '16 to 20 moves, boards up to 10×10' },
+        ];
+
+        var lhost = document.getElementById('ladders');
+        if (lhost) {
+          LADDERS.forEach(function (l) {
+            var row = document.createElement('div');
+            row.className = 'ladder';
+
+            var name = document.createElement('div');
+            name.className = 'ladder-name';
+            var sw = document.createElement('span');
+            sw.className = 'swatch';
+            sw.style.backgroundColor = 'var(--' + l.color + ')';
+            name.appendChild(sw);
+            name.appendChild(document.createTextNode(l.name));
+
+            var note = document.createElement('div');
+            note.className = 'ladder-note';
+            note.textContent = l.note;
+
+            var count = document.createElement('div');
+            count.className = 'ladder-count';
+            count.textContent = l.count + ' puzzles';
+
+            row.appendChild(name);
+            row.appendChild(note);
+            row.appendChild(count);
+            lhost.appendChild(row);
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>
