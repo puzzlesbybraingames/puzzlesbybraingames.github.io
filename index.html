@@ -442,10 +442,14 @@
 
       .mini {
         width: 100%;
-        max-width: 150px;
+        max-width: 172px;
         aspect-ratio: 1;
         display: grid;
+        /* Rows are declared, not left implicit. Implicit rows size to content, so
+           the one row holding a piece grew taller than the other three and the
+           board stopped being square. */
         grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(4, 1fr);
         gap: 2px;
         padding: 6px;
         background: var(--wall);
@@ -457,13 +461,22 @@
         border-radius: 2px;
         display: grid;
         place-items: center;
-        font-size: 0.95rem;
+        min-width: 0;
+        min-height: 0;
+        font-size: 1.5rem;
         line-height: 1;
       }
 
+      /* Both of these sit on painted cells, so they are drawn in white rather than
+         a theme neutral — a mid-grey dashes out against a saturated fill. */
       .mini div.ghost {
-        outline: 1.5px dashed var(--faint);
-        outline-offset: -3px;
+        outline: 1.5px dashed rgba(255, 255, 255, 0.8);
+        outline-offset: -4px;
+      }
+
+      .mini div.mark {
+        outline: 2px solid rgba(255, 255, 255, 0.9);
+        outline-offset: -2px;
       }
 
       .rule h3 {
@@ -485,6 +498,108 @@
         font-size: 0.93rem;
         color: var(--muted);
         margin: 0;
+      }
+
+      .rule-note {
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        line-height: 1.55;
+        color: var(--faint);
+        margin: 0;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--line);
+      }
+
+      /* --- order matters ------------------------------------------------- */
+
+      .order {
+        margin-top: 1.1rem;
+        display: grid;
+        gap: 1.6rem;
+        padding: 1.4rem;
+        background: var(--sunk);
+        border-radius: var(--radius);
+        align-items: center;
+      }
+
+      @media (min-width: 780px) {
+        .order {
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 2.5rem;
+        }
+      }
+
+      .order-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      .order-copy p {
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      /* Two fixed tracks, not flex-wrap: the pair only works read side by side,
+         and left to wrap they stacked into a column against a half-empty panel. */
+      .order-boards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 142px));
+        gap: 1.25rem;
+      }
+
+      .order-one {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+        min-width: 0;
+      }
+
+      .order-one .mini div {
+        font-size: 1.25rem;
+      }
+
+      /* --- also true ----------------------------------------------------- */
+
+      .also {
+        display: grid;
+        gap: 1.5rem 2rem;
+        grid-template-columns: 1fr;
+        margin-top: 2.25rem;
+        padding-top: 1.9rem;
+        border-top: 1px solid var(--line);
+      }
+
+      @media (min-width: 620px) {
+        .also {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (min-width: 980px) {
+        .also {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      .also > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .also h4 {
+        margin: 0;
+        font-family: var(--body);
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+
+      .also p {
+        margin: 0;
+        font-size: 0.88rem;
+        color: var(--muted);
       }
 
       /* --- ladders ------------------------------------------------------- */
@@ -742,6 +857,47 @@
         </div>
 
         <div class="rules" id="rules"></div>
+
+        <div class="order">
+          <div class="order-copy">
+            <p class="eyebrow">Order matters</p>
+            <h3>Later paint covers earlier</h3>
+            <p>
+              The same two moves, played in the other order, give a different picture. A rook comes
+              down the file and a queen runs across the rank; they cross on the ringed cell, and
+              whichever moved second owns it. Working out the order is the puzzle.
+            </p>
+          </div>
+          <div class="order-boards" id="order-boards"></div>
+        </div>
+
+        <div class="also">
+          <div>
+            <h4>Nothing is ever captured</h4>
+            <p>An occupied cell simply blocks. Pieces share the board; they don't fight over it.</p>
+          </div>
+          <div>
+            <h4>Sliders stop before a blocker</h4>
+            <p>
+              A rook, bishop or queen runs until a wall, a void, another piece or the edge, and
+              halts on the cell before it.
+            </p>
+          </div>
+          <div>
+            <h4>Walls and voids take no paint</h4>
+            <p>
+              They are the shape of the board rather than part of the picture, and a knight may not
+              land on one.
+            </p>
+          </div>
+          <div>
+            <h4>See a move before you play it</h4>
+            <p>
+              Press and hold, or drag, and the board shows you exactly which cells that move would
+              repaint.
+            </p>
+          </div>
+        </div>
       </section>
 
       <!-- ================= what's in it ================= -->
@@ -986,6 +1142,46 @@
           after(900, play);
         }
 
+        /* ---- small static boards ----
+           `paint` is applied in order and the last entry for a cell wins, which is
+           the game's own rule: later paint covers earlier. */
+
+        function makeMini(spec) {
+          var mini = document.createElement('div');
+          mini.className = 'mini';
+          mini.setAttribute('aria-hidden', 'true');
+
+          for (var row = 0; row < 4; row++) {
+            for (var col = 0; col < 4; col++) {
+              var cell = document.createElement('div');
+
+              spec.paint.forEach(function (p) {
+                if (p[0] === col && p[1] === row) {
+                  cell.style.backgroundColor = 'var(--' + p[2] + ')';
+                }
+              });
+              if (spec.ghost && spec.ghost[0] === col && spec.ghost[1] === row) {
+                cell.classList.add('ghost');
+              }
+              if (spec.mark && spec.mark[0] === col && spec.mark[1] === row) {
+                cell.classList.add('mark');
+              }
+              (spec.glyphs || []).forEach(function (g) {
+                if (g[0] === col && g[1] === row) cell.textContent = g[2];
+              });
+
+              mini.appendChild(cell);
+            }
+          }
+          return mini;
+        }
+
+        function tint(cells, color) {
+          return cells.map(function (c) {
+            return [c[0], c[1], color];
+          });
+        }
+
         /* ---- the three rule cards ---- */
 
         var RULES = [
@@ -996,13 +1192,14 @@
             color: 'orchid',
             from: [0, 3],
             to: [3, 0],
-            paints: [
+            cells: [
               [0, 3],
               [1, 2],
               [2, 1],
               [3, 0],
             ],
-            text: 'Paints the whole line it slides along, start and finish included.',
+            text: 'Paints the whole line it slides along &mdash; the cell it left and the cell it lands on included.',
+            note: 'Queens do both: straight and diagonal.',
           },
           {
             title: 'Jump',
@@ -1011,11 +1208,12 @@
             color: 'lagoon',
             from: [0, 3],
             to: [1, 1],
-            paints: [
+            cells: [
               [0, 3],
               [1, 1],
             ],
-            text: 'Paints only the two ends of the jump. What it leaps over stays untouched.',
+            text: 'Paints only the two ends of the jump. Whatever it leaps over is left exactly as it was.',
+            note: 'Lands only on a free, paintable cell.',
           },
           {
             title: 'Step',
@@ -1024,11 +1222,12 @@
             color: 'marigold',
             from: [1, 3],
             to: [1, 2],
-            paints: [
+            cells: [
               [1, 3],
               [1, 2],
             ],
-            text: 'Paints where it leaves and where it arrives &mdash; two cells.',
+            text: 'Paints where it leaves and where it arrives &mdash; two cells, every time.',
+            note: 'Kings step any of eight ways; pawns step the way they face.',
           },
         ];
 
@@ -1038,33 +1237,64 @@
             var card = document.createElement('div');
             card.className = 'rule';
 
-            var mini = document.createElement('div');
-            mini.className = 'mini';
-            mini.setAttribute('aria-hidden', 'true');
-
-            for (var row = 0; row < 4; row++) {
-              for (var col = 0; col < 4; col++) {
-                var cell = document.createElement('div');
-                var painted = r.paints.some(function (p) {
-                  return p[0] === col && p[1] === row;
-                });
-                if (painted) cell.style.backgroundColor = 'var(--' + r.color + ')';
-                if (r.from[0] === col && r.from[1] === row) cell.className = 'ghost';
-                if (r.to[0] === col && r.to[1] === row) cell.textContent = r.glyph;
-                mini.appendChild(cell);
-              }
-            }
-
             var h = document.createElement('h3');
             h.innerHTML = r.title + ' <span>' + r.pieces + '</span>';
 
             var p = document.createElement('p');
             p.innerHTML = r.text;
 
-            card.appendChild(mini);
+            var note = document.createElement('p');
+            note.className = 'rule-note';
+            note.innerHTML = r.note;
+
+            card.appendChild(
+              makeMini({ paint: tint(r.cells, r.color), ghost: r.from, glyphs: [[r.to[0], r.to[1], r.glyph]] }),
+            );
             card.appendChild(h);
             card.appendChild(p);
+            card.appendChild(note);
             host.appendChild(card);
+          });
+        }
+
+        /* ---- order matters ----
+           A rook down the file and a queen across the rank. They cross on (1,2) and
+           neither finishes there, so both orders are legal moves — which is the only
+           reason this comparison can be drawn at all. */
+
+        var ROOK_LINE = [
+          [1, 0],
+          [1, 1],
+          [1, 2],
+          [1, 3],
+        ];
+        var QUEEN_LINE = [
+          [0, 2],
+          [1, 2],
+          [2, 2],
+          [3, 2],
+        ];
+        var ENDS = [
+          [1, 3, '♜'],
+          [3, 2, '♛'],
+        ];
+
+        var obox = document.getElementById('order-boards');
+        if (obox) {
+          [
+            { label: 'Rook first', paint: tint(ROOK_LINE, 'cobalt').concat(tint(QUEEN_LINE, 'rose')) },
+            { label: 'Queen first', paint: tint(QUEEN_LINE, 'rose').concat(tint(ROOK_LINE, 'cobalt')) },
+          ].forEach(function (o) {
+            var one = document.createElement('div');
+            one.className = 'order-one';
+
+            var tag = document.createElement('p');
+            tag.className = 'eyebrow';
+            tag.textContent = o.label;
+
+            one.appendChild(makeMini({ paint: o.paint, glyphs: ENDS, mark: [1, 2] }));
+            one.appendChild(tag);
+            obox.appendChild(one);
           });
         }
 
